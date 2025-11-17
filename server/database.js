@@ -952,21 +952,16 @@ class Database {
       this.db.serialize(() => {
         this.db.run('BEGIN TRANSACTION');
         
-        // Удаляем все лайки сообщений чата
-        this.db.run(`
-          DELETE FROM message_likes 
-          WHERE message_id IN (
-            SELECT id FROM messages WHERE chat_id = ?
-          )
-        `, [chatId], (err) => {
+        // Удаляем все запланированные сообщения чата (важно делать ПЕРВЫМ, так как нет ON DELETE CASCADE)
+        this.db.run('DELETE FROM scheduled_messages WHERE chat_id = ?', [chatId], (err) => {
           if (err) {
             this.db.run('ROLLBACK');
             return reject(err);
           }
           
-          // Удаляем все записи о прочитанности сообщений чата
+          // Удаляем все лайки сообщений чата
           this.db.run(`
-            DELETE FROM message_reads 
+            DELETE FROM message_likes 
             WHERE message_id IN (
               SELECT id FROM messages WHERE chat_id = ?
             )
@@ -976,36 +971,49 @@ class Database {
               return reject(err);
             }
             
-            // Удаляем все сообщения чата
-            this.db.run('DELETE FROM messages WHERE chat_id = ?', [chatId], (err) => {
+            // Удаляем все записи о прочитанности сообщений чата
+            this.db.run(`
+              DELETE FROM message_reads 
+              WHERE message_id IN (
+                SELECT id FROM messages WHERE chat_id = ?
+              )
+            `, [chatId], (err) => {
               if (err) {
                 this.db.run('ROLLBACK');
                 return reject(err);
               }
               
-              // Удаляем всех участников чата
-              this.db.run('DELETE FROM chat_participants WHERE chat_id = ?', [chatId], (err) => {
+              // Удаляем все сообщения чата
+              this.db.run('DELETE FROM messages WHERE chat_id = ?', [chatId], (err) => {
                 if (err) {
                   this.db.run('ROLLBACK');
                   return reject(err);
                 }
                 
-                // Удаляем сам чат
-                this.db.run('DELETE FROM chats WHERE id = ?', [chatId], function(err) {
+                // Удаляем всех участников чата
+                this.db.run('DELETE FROM chat_participants WHERE chat_id = ?', [chatId], (err) => {
                   if (err) {
                     this.db.run('ROLLBACK');
                     return reject(err);
                   }
                   
-                  const changes = this.changes;
-                  
-                  // Коммитим транзакцию
-                  this.db.run('COMMIT', (commitErr) => {
-                    if (commitErr) {
-                      return reject(commitErr);
+                  // Удаляем сам чат
+                  this.db.run('DELETE FROM chats WHERE id = ?', [chatId], function(err) {
+                    if (err) {
+                      this.db.run('ROLLBACK');
+                      return reject(err);
                     }
-                    console.log(`✅ Chat ${chatId} deleted successfully`);
-                    resolve(changes || 1);
+                    
+                    const changes = this.changes;
+                    
+                    // Коммитим транзакцию
+                    this.db.run('COMMIT', (commitErr) => {
+                      if (commitErr) {
+                        return reject(commitErr);
+                      }
+                      console.log(`✅ Chat ${chatId} deleted successfully`);
+                      resolve(changes || 1);
+                    });
                   });
                 });
               });
