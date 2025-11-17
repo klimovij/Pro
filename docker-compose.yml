@@ -18,8 +18,6 @@ services:
     volumes:
       - ./server/uploads:/app/uploads
       - ./server/messenger.db:/app/messenger.db
-      - ./server/messenger.db-shm:/app/messenger.db-shm
-      - ./server/messenger.db-wal:/app/messenger.db-wal
     restart: unless-stopped
     networks:
       - mesendger-network
