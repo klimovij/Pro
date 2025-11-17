@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: mesendger-server
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
+      - NODE_ENV=production
+      - EXTERNAL_IP=${EXTERNAL_IP:-}
+      - CLIENT_URL=${CLIENT_URL:-}
+    volumes:
+      - ./server/uploads:/app/uploads
+      - ./server/messenger.db:/app/messenger.db
+      - ./server/messenger.db-shm:/app/messenger.db-shm
+      - ./server/messenger.db-wal:/app/messenger.db-wal
+    restart: unless-stopped
+    networks:
+      - mesendger-network
+
+  client:
+    build:
+      context: ./client-react
+      dockerfile: Dockerfile
+    container_name: mesendger-client
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - mesendger-network
+
+networks:
+  mesendger-network:
+    driver: bridge
+
