@@ -51,7 +51,9 @@ db.all('SELECT id, username, avatar FROM users WHERE avatar != ""', (err, rows) 
           console.log(`   💡 Обновляю путь на: ${newPath}`);
           updates.push({ id: user.id, newPath: newPath });
         } else {
-          console.log(`   ⚠️  Файл не найден и похожих нет`);
+          // Файл не найден - очищаем путь в базе
+          console.log(`   ⚠️  Файл не найден - очищаю путь в базе`);
+          updates.push({ id: user.id, newPath: '' });
         }
       }
     }
