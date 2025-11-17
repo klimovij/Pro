@@ -1,5 +1,6 @@
 var sqlite3 = require('sqlite3').verbose();
 var bcrypt = require('bcrypt');
+var path = require('path');
 
 class Database {
   // Публичный метод для комментария к поздравлению
@@ -107,7 +108,8 @@ class Database {
     });
   }
   constructor() {
-    this.db = new sqlite3.Database('./messenger.db');
+    const dbPath = process.env.DB_PATH || path.join(__dirname, 'messenger.db');
+    this.db = new sqlite3.Database(dbPath);
     this.db.configure('busyTimeout', 30000); // ожидание до 30 секунд
     this.init();
 
