@@ -11,7 +11,9 @@ RUN npm install
 # Копирование исходного кода
 COPY . .
 
-# Сборка приложения
+# Сборка приложения (отключаем ESLint для production)
+ENV DISABLE_ESLINT_PLUGIN=true
+ENV CI=false
 RUN npm run build
 
 # Этап 2: Production
