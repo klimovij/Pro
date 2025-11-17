@@ -3807,6 +3807,14 @@ io.on('connection', (socket) => {
     
       console.log('📝 Creating chat:', { name, type, userId: socket.userId });
     
+      // Проверяем, что пользователь существует
+      const user = await db.getUserById(socket.userId);
+      if (!user) {
+        console.error('❌ User not found:', socket.userId);
+        socket.emit('error', 'Пользователь не найден. Пожалуйста, перезайдите в систему.');
+        return;
+      }
+    
       const chatId = await db.createChat(name.trim(), type, socket.userId);
       await db.addUserToChat(chatId, socket.userId);
     
