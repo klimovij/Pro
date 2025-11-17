@@ -997,15 +997,17 @@ class Database {
                     return reject(err);
                   }
                   
+                  const changes = this.changes;
+                  
                   // Коммитим транзакцию
                   this.db.run('COMMIT', (commitErr) => {
                     if (commitErr) {
                       return reject(commitErr);
                     }
                     console.log(`✅ Chat ${chatId} deleted successfully`);
-                    resolve(this.changes || 1);
+                    resolve(changes || 1);
                   });
-                }.bind(this));
+                });
               });
             });
           });
