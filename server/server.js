@@ -4107,6 +4107,9 @@ socket.on('delete_chat', requireAuth(async (data) => {
     if (chat.type === 'private') {
       console.log(`🗑️ Processing private chat deletion: chatId=${chatId}, userId=${socket.userId}`);
       
+      // Получаем список участников до удаления
+      const participants = await db.getChatParticipants(chatId);
+      
       await db.removeUserFromChat(chatId, socket.userId);
       socket.leave(`chat_${chatId}`);
       
@@ -4115,6 +4118,19 @@ socket.on('delete_chat', requireAuth(async (data) => {
         chatId,
         chatName: chat.name
       });
+      
+      // Обновляем список чатов для всех участников
+      for (const participant of participants) {
+        const chats = await db.getUserChats(participant.user_id);
+        const socketId = connectedUsers.get(participant.user_id);
+        if (socketId) {
+          io.to(socketId).emit('chats_updated', chats);
+        }
+      }
+      
+      // Также обновляем список чатов для текущего пользователя
+      const currentUserChats = await db.getUserChats(socket.userId);
+      socket.emit('chats_updated', currentUserChats);
       
       console.log('✅ Private chat deletion completed:', { chatId, userId: socket.userId });
       return;
@@ -4133,6 +4149,9 @@ socket.on('delete_chat', requireAuth(async (data) => {
       if (isCreator || isAdmin) {
         console.log(`🗑️ Deleting group chat ${chatId} completely...`);
         
+        // Получаем список участников до удаления
+        const participants = await db.getChatParticipants(chatId);
+        
         // Полностью удаляем групповой чат
         await db.deleteChat(chatId);
         socket.leave(`chat_${chatId}`);
@@ -4142,6 +4161,19 @@ socket.on('delete_chat', requireAuth(async (data) => {
           chatId,
           chatName: chat.name
         });
+        
+        // Обновляем список чатов для всех участников
+        for (const participant of participants) {
+          const chats = await db.getUserChats(participant.user_id);
+          const socketId = connectedUsers.get(participant.user_id);
+          if (socketId) {
+            io.to(socketId).emit('chats_updated', chats);
+          }
+        }
+        
+        // Также обновляем список чатов для текущего пользователя
+        const currentUserChats = await db.getUserChats(socket.userId);
+        socket.emit('chats_updated', currentUserChats);
         
         console.log('✅ Group chat deletion completed:', { chatId, userId: socket.userId });
         return;

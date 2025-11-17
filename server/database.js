@@ -963,57 +963,52 @@ class Database {
             this.db.run('ROLLBACK');
             return reject(err);
           }
-        });
-        
-        // Удаляем все записи о прочитанности сообщений чата
-        this.db.run(`
-          DELETE FROM message_reads 
-          WHERE message_id IN (
-            SELECT id FROM messages WHERE chat_id = ?
-          )
-        `, [chatId], (err) => {
-          if (err) {
-            this.db.run('ROLLBACK');
-            return reject(err);
-          }
-        });
-        
-        // Удаляем все сообщения чата
-        this.db.run('DELETE FROM messages WHERE chat_id = ?', [chatId], (err) => {
-          if (err) {
-            this.db.run('ROLLBACK');
-            return reject(err);
-          }
-        });
-        
-        // Удаляем всех участников чата
-        this.db.run('DELETE FROM chat_participants WHERE chat_id = ?', [chatId], (err) => {
-          if (err) {
-            this.db.run('ROLLBACK');
-            return reject(err);
-          }
-        });
-        
-        // Удаляем сам чат
-        this.db.run('DELETE FROM chats WHERE id = ?', [chatId], (err) => {
-          if (err) {
-            this.db.run('ROLLBACK');
-            return reject(err);
-          } else {
-            this.db.run('COMMIT', (commitErr) => {
-              if (commitErr) {
-                return reject(commitErr);
+          
+          // Удаляем все записи о прочитанности сообщений чата
+          this.db.run(`
+            DELETE FROM message_reads 
+            WHERE message_id IN (
+              SELECT id FROM messages WHERE chat_id = ?
+            )
+          `, [chatId], (err) => {
+            if (err) {
+              this.db.run('ROLLBACK');
+              return reject(err);
+            }
+            
+            // Удаляем все сообщения чата
+            this.db.run('DELETE FROM messages WHERE chat_id = ?', [chatId], (err) => {
+              if (err) {
+                this.db.run('ROLLBACK');
+                return reject(err);
               }
-              // Получаем количество изменений через get, так как this.changes недоступен
-              this.db.get('SELECT changes() AS changes', (getErr, row) => {
-                if (getErr) {
-                  return reject(getErr);
+              
+              // Удаляем всех участников чата
+              this.db.run('DELETE FROM chat_participants WHERE chat_id = ?', [chatId], (err) => {
+                if (err) {
+                  this.db.run('ROLLBACK');
+                  return reject(err);
                 }
-                console.log(`✅ Chat ${chatId} deleted successfully with ${row.changes} changes`);
-                resolve(row.changes);
+                
+                // Удаляем сам чат
+                this.db.run('DELETE FROM chats WHERE id = ?', [chatId], function(err) {
+                  if (err) {
+                    this.db.run('ROLLBACK');
+                    return reject(err);
+                  }
+                  
+                  // Коммитим транзакцию
+                  this.db.run('COMMIT', (commitErr) => {
+                    if (commitErr) {
+                      return reject(commitErr);
+                    }
+                    console.log(`✅ Chat ${chatId} deleted successfully`);
+                    resolve(this.changes || 1);
+                  });
+                }.bind(this));
               });
             });
-          }
+          });
         });
       });
     });
