@@ -3554,9 +3554,20 @@ io.on('connection', (socket) => {
     });
     
     try {
+      // Проверяем, что пользователь существует в базе
+      const user = await db.getUserById(socket.userId);
+      if (!user) {
+        console.error('❌ Authenticated user not found in database:', {
+          socketUserId: socket.userId,
+          decoded: decoded
+        });
+        socket.emit('auth_error', 'Пользователь не найден в базе данных. Пожалуйста, перезайдите в систему.');
+        return;
+      }
+      
       await db.updateUserOnlineStatus(socket.userId, true);
       connectedUsers.set(socket.userId, socket.id);
-      console.log(`👤 User ${socket.userId} (${socket.username}) came online`);
+      console.log(`👤 User ${socket.userId} (${socket.username || user.username}) came online`);
       
       socket.emit('authenticated', { userId: socket.userId, username: socket.username, role: socket.role });
       
@@ -3805,12 +3816,30 @@ io.on('connection', (socket) => {
         return;
       }
     
-      console.log('📝 Creating chat:', { name, type, userId: socket.userId });
+      console.log('📝 Creating chat:', { name, type, userId: socket.userId, socketId: socket.id });
     
       // Проверяем, что пользователь существует
+      if (!socket.userId) {
+        console.error('❌ socket.userId is undefined');
+        socket.emit('error', 'Пользователь не аутентифицирован. Пожалуйста, перезайдите в систему.');
+        return;
+      }
+      
       const user = await db.getUserById(socket.userId);
       if (!user) {
-        console.error('❌ User not found:', socket.userId);
+        console.error('❌ User not found in database:', {
+          socketUserId: socket.userId,
+          socketUsername: socket.username,
+          socketRole: socket.role
+        });
+        // Проверяем всех пользователей для диагностики
+        const allUsers = await new Promise((resolve, reject) => {
+          db.db.all('SELECT id, username FROM users ORDER BY id', (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          });
+        });
+        console.error('📋 Users in database:', allUsers);
         socket.emit('error', 'Пользователь не найден. Пожалуйста, перезайдите в систему.');
         return;
       }
