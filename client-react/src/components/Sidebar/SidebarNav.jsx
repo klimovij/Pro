@@ -409,7 +409,8 @@ export default function SidebarNav() {
   const fetchMyTasksCount = useCallback(() => {
     const token = localStorage.getItem('token');
     if (!token || !state.user) return;
-    fetch('http://localhost:5000/api/tasks/open', {
+    const apiUrl = process.env.NODE_ENV === 'production' ? '/api/tasks/open' : 'http://localhost:5000/api/tasks/open';
+    fetch(apiUrl, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())
