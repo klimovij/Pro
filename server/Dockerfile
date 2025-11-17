@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Установка зависимостей
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Копирование остальных файлов сервера
 COPY . .
