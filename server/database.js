@@ -111,6 +111,14 @@ class Database {
     const dbPath = process.env.DB_PATH || path.join(__dirname, 'messenger.db');
     this.db = new sqlite3.Database(dbPath);
     this.db.configure('busyTimeout', 30000); // ожидание до 30 секунд
+    // Включаем внешние ключи (по умолчанию они отключены в SQLite)
+    this.db.run('PRAGMA foreign_keys = ON;', (err) => {
+      if (err) {
+        console.error('❌ Ошибка включения внешних ключей:', err);
+      } else {
+        console.log('✅ Внешние ключи включены');
+      }
+    });
     this.init();
 
     // Миграция: добавить поля poll_votes и poll_voters для поддержки опросов (отключено для избежания блокировки БД)
