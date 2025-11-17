@@ -1409,13 +1409,22 @@ class Database {
     });
   }
 
-  // Найти сотрудника по имени и фамилии
+  // Найти сотрудника по имени и фамилии (нечувствительно к регистру и пробелам)
   async findEmployeeByName(first_name, last_name) {
     return new Promise((resolve, reject) => {
-      this.db.get('SELECT * FROM employees WHERE first_name = ? AND last_name = ?', [first_name, last_name], (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
+      // Нормализуем входные данные: убираем лишние пробелы и приводим к нижнему регистру для сравнения
+      const normalizedFirst = (first_name || '').trim();
+      const normalizedLast = (last_name || '').trim();
+      
+      // Ищем с учетом регистра, но также пробуем найти по нормализованным значениям
+      this.db.get(
+        'SELECT * FROM employees WHERE TRIM(LOWER(first_name)) = TRIM(LOWER(?)) AND TRIM(LOWER(last_name)) = TRIM(LOWER(?))',
+        [normalizedFirst, normalizedLast],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
     });
   }
 
